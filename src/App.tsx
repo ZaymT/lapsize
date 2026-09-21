@@ -1,36 +1,38 @@
-import { useState, useMemo, useCallback } from 'react';
-import type { Track, GameMode, RoundResult, UserStats, DailyChallengeState } from './types/game';
+import { useState, useCallback, useMemo, useEffect } from 'react';
+import type { Track, RoundResult, GameMode, UserStats, DailyChallengeState } from './types/game';
+import { 
+  getDailySeed, 
+  calculateRoundScore, 
+  generateSessionMatchups, 
+  createMulberry32,
+  loadUserStats,
+  updateUserStatsOnComplete,
+  loadDailyChallenge,
+  saveDailyChallenge,
+  type RoundSetup
+} from './utils/gameUtils';
+import { useCanvasTransform } from './hooks/useCanvasTransform';
 import { TrackCanvas } from './components/TrackCanvas';
 import { Controls } from './components/Controls';
 import { RevealModal } from './components/RevealModal';
 import { ScoreCard } from './components/ScoreCard';
 import { HowToPlayModal } from './components/HowToPlayModal';
 import { CircuitGarage } from './components/CircuitGarage';
-import { useCanvasTransform } from './hooks/useCanvasTransform';
 import { 
-  createMulberry32, 
-  getDailySeed, 
-  calculateRoundScore, 
-  generateSessionMatchups,
-  type RoundSetup,
-  loadUserStats,
-  loadDailyChallenge,
-  saveDailyChallenge,
-  updateUserStatsOnComplete
-} from './utils/gameUtils';
-import { 
-  Flame, 
   HelpCircle, 
   Compass, 
-  Radio
+  Flame, 
+  Radio,
+  Sun,
+  Moon
 } from 'lucide-react';
 
-// Subcomponent managing an individual round's interactive canvas and controls
 interface GameRoundStageProps {
   referenceTrack: Track;
   targetTrack: Track;
   initialScale: number;
   currentRoundIndex: number;
+  isDark: boolean;
   onLockInCommit: (result: RoundResult) => void;
 }
 
@@ -39,6 +41,7 @@ function GameRoundStage({
   targetTrack,
   initialScale,
   currentRoundIndex,
+  isDark,
   onLockInCommit,
 }: GameRoundStageProps) {
   const {
@@ -93,6 +96,7 @@ function GameRoundStage({
           ghostTransform={ghostTransform}
           stageTransform={stageTransform}
           isRevealing={isRevealing}
+          isDark={isDark}
           handlers={handlers}
           onCenterTarget={centerTargetTrack}
         />
@@ -117,6 +121,25 @@ function GameRoundStage({
 export function App() {
   const [gameMode, setGameMode] = useState<GameMode>('daily');
   const todaySeedInfo = useMemo(() => getDailySeed(), []);
+
+  // Dark / Light Mode State
+  const [isDark, setIsDark] = useState<boolean>(() => {
+    const saved = localStorage.getItem('lapsize_theme');
+    if (saved) return saved === 'dark';
+    return true; // default to sleek dark
+  });
+
+  useEffect(() => {
+    if (isDark) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('lapsize_theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('lapsize_theme', 'light');
+    }
+  }, [isDark]);
+
+  const toggleTheme = () => setIsDark(prev => !prev);
 
   // User statistics loaded from localStorage
   const [userStats, setUserStats] = useState<UserStats>(() => loadUserStats());
@@ -155,14 +178,14 @@ export function App() {
   const [showGarage, setShowGarage] = useState(false);
 
   // Start / restart game session
-  const initGameSession = useCallback((mode: GameMode) => {
+  const initGameSession = useCallback((mode: GameMode, forceReplay: boolean = false) => {
     let setups: RoundSetup[] = [];
     if (mode === 'daily') {
       const prng = createMulberry32(todaySeedInfo.seed);
       setups = generateSessionMatchups('daily', prng);
       
       const existingDaily = loadDailyChallenge(todaySeedInfo.dateString);
-      if (existingDaily && existingDaily.completed) {
+      if (!forceReplay && existingDaily && existingDaily.completed) {
         setIsDailyCompleted(true);
         setResults(existingDaily.roundResults);
         setRoundSetups(setups);
@@ -186,7 +209,7 @@ export function App() {
   const handleModeSwitch = (newMode: GameMode) => {
     if (newMode === gameMode) return;
     setGameMode(newMode);
-    initGameSession(newMode);
+    initGameSession(newMode, false);
   };
 
   // Lock In completed by child round stage
@@ -231,29 +254,31 @@ export function App() {
   const activeResult = results[results.length - 1];
 
   return (
-    <div className="relative w-screen h-screen flex flex-col bg-carbon-950 text-slate-100 overflow-hidden select-none font-sans">
+    <div className={`relative w-screen h-screen flex flex-col overflow-hidden select-none font-sans transition-colors ${
+      isDark ? 'bg-[#090D16] text-slate-100' : 'bg-[#F8FAFC] text-slate-900'
+    }`}>
       
       {/* ========================================================================= */}
       {/* 1. MOTORSPORT TELEMETRY TOP HEADER                                        */}
       {/* ========================================================================= */}
-      <header className="h-14 shrink-0 px-4 bg-carbon-900/90 border-b border-slate-800/80 backdrop-blur-xl flex items-center justify-between z-30">
+      <header className="h-14 shrink-0 px-4 bg-white/95 dark:bg-slate-900/95 border-b border-slate-200 dark:border-slate-800 backdrop-blur-xl flex items-center justify-between z-30 transition-colors">
         {/* Brand & Live Telemetry Badge */}
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-carbon-950 border border-cyan-500/50 flex items-center justify-center shadow-cyan-glow">
-              <span className="text-cyan-400 font-mono font-black text-sm">LS</span>
+            <div className="w-8 h-8 rounded-lg bg-blue-600 dark:bg-cyan-500 flex items-center justify-center shadow-sm">
+              <span className="text-white dark:text-slate-950 font-mono font-black text-sm">LS</span>
             </div>
             <div className="flex flex-col">
               <div className="flex items-center gap-1.5">
-                <span className="font-mono font-extrabold text-base tracking-wider text-slate-100">
+                <span className="font-mono font-black text-base tracking-wider text-slate-900 dark:text-slate-100">
                   LAPSIZE
                 </span>
-                <span className="text-[10px] font-mono px-1.5 py-0.2 bg-cyan-950 text-cyan-400 border border-cyan-500/40 rounded font-bold">
+                <span className="text-[10px] font-mono px-1.5 py-0.2 bg-blue-50 dark:bg-cyan-950 text-blue-700 dark:text-cyan-400 border border-blue-200 dark:border-cyan-500/40 rounded font-bold">
                   v2.0
                 </span>
               </div>
-              <div className="hidden sm:flex items-center gap-1.5 text-[9px] font-mono text-slate-400">
-                <Radio className="w-2.5 h-2.5 text-emerald-400 animate-pulse" />
+              <div className="hidden sm:flex items-center gap-1.5 text-[9px] font-mono text-slate-500 dark:text-slate-400">
+                <Radio className="w-2.5 h-2.5 text-emerald-500 animate-pulse" />
                 <span>CALIBRATED METRIC GROUND TRUTH</span>
               </div>
             </div>
@@ -261,20 +286,20 @@ export function App() {
         </div>
 
         {/* Game Mode Selector Tabs */}
-        <div className="hidden md:flex items-center p-1 bg-carbon-950 rounded-xl border border-slate-800 text-xs font-mono">
+        <div className="hidden md:flex items-center p-1 bg-slate-100 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-mono shadow-sm">
           <button
             onClick={() => handleModeSwitch('daily')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold transition-all ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold transition-all ${
               gameMode === 'daily'
-                ? 'bg-amber-400 text-carbon-950 shadow-amber-glow font-bold'
-                : 'text-slate-400 hover:text-slate-200'
+                ? 'bg-amber-500 text-slate-950 shadow-sm'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
             }`}
           >
             <span>DAILY</span>
             {isDailyCompleted ? (
-              <span className="text-[11px] text-emerald-950 font-bold bg-emerald-400/80 px-1 rounded">✓</span>
+              <span className="text-[11px] text-emerald-950 font-bold bg-emerald-300 px-1 rounded">✓</span>
             ) : userStats.dailyStreak > 0 ? (
-              <span className="flex items-center text-[10px] gap-0.5 bg-carbon-950/40 px-1 py-0.2 rounded text-slate-900">
+              <span className="flex items-center text-[10px] gap-0.5 bg-slate-900/20 px-1 py-0.2 rounded text-slate-950 font-bold">
                 <Flame className="w-2.5 h-2.5 fill-current" />
                 {userStats.dailyStreak}
               </span>
@@ -283,10 +308,10 @@ export function App() {
 
           <button
             onClick={() => handleModeSwitch('f1')}
-            className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${
+            className={`px-3 py-1.5 rounded-lg font-bold transition-all ${
               gameMode === 'f1'
-                ? 'bg-cyan-400 text-carbon-950 shadow-cyan-glow font-bold'
-                : 'text-slate-400 hover:text-slate-200'
+                ? 'bg-white dark:bg-slate-800 text-blue-700 dark:text-cyan-400 border border-slate-300 dark:border-slate-700 shadow-sm'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
             }`}
           >
             FORMULA 1
@@ -294,10 +319,10 @@ export function App() {
 
           <button
             onClick={() => handleModeSwitch('nascar')}
-            className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${
+            className={`px-3 py-1.5 rounded-lg font-bold transition-all ${
               gameMode === 'nascar'
-                ? 'bg-cyan-400 text-carbon-950 shadow-cyan-glow font-bold'
-                : 'text-slate-400 hover:text-slate-200'
+                ? 'bg-white dark:bg-slate-800 text-blue-700 dark:text-cyan-400 border border-slate-300 dark:border-slate-700 shadow-sm'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
             }`}
           >
             NASCAR
@@ -305,10 +330,10 @@ export function App() {
 
           <button
             onClick={() => handleModeSwitch('indycar')}
-            className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${
+            className={`px-3 py-1.5 rounded-lg font-bold transition-all ${
               gameMode === 'indycar'
-                ? 'bg-cyan-400 text-carbon-950 shadow-cyan-glow font-bold'
-                : 'text-slate-400 hover:text-slate-200'
+                ? 'bg-white dark:bg-slate-800 text-blue-700 dark:text-cyan-400 border border-slate-300 dark:border-slate-700 shadow-sm'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
             }`}
           >
             INDYCAR
@@ -316,10 +341,10 @@ export function App() {
 
           <button
             onClick={() => handleModeSwitch('open')}
-            className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${
+            className={`px-3 py-1.5 rounded-lg font-bold transition-all ${
               gameMode === 'open'
-                ? 'bg-cyan-400 text-carbon-950 shadow-cyan-glow font-bold'
-                : 'text-slate-400 hover:text-slate-200'
+                ? 'bg-white dark:bg-slate-800 text-blue-700 dark:text-cyan-400 border border-slate-300 dark:border-slate-700 shadow-sm'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
             }`}
           >
             OPEN CLASS
@@ -333,7 +358,7 @@ export function App() {
             <select
               value={gameMode}
               onChange={e => handleModeSwitch(e.target.value as GameMode)}
-              className="bg-carbon-950 text-slate-200 border border-slate-700 text-xs px-2 py-1.5 rounded-lg focus:outline-none"
+              className="bg-slate-100 dark:bg-slate-950 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 text-xs px-2 py-1.5 rounded-lg focus:outline-none"
             >
               <option value="daily">Daily Race</option>
               <option value="f1">Formula 1</option>
@@ -343,23 +368,42 @@ export function App() {
             </select>
           </div>
 
+          {/* Dark / Light Mode Switch */}
+          <button
+            onClick={toggleTheme}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl border border-slate-300 dark:border-slate-700 transition-all shadow-sm active:scale-95"
+            title={isDark ? "Switch to Light Theme" : "Switch to Dark Theme"}
+          >
+            {isDark ? (
+              <>
+                <Sun className="w-4 h-4 text-amber-400" />
+                <span className="hidden sm:inline font-bold">Light</span>
+              </>
+            ) : (
+              <>
+                <Moon className="w-4 h-4 text-blue-600" />
+                <span className="hidden sm:inline font-bold">Dark</span>
+              </>
+            )}
+          </button>
+
           {/* Circuit Archive / Garage button */}
           <button
             onClick={() => setShowGarage(true)}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 bg-carbon-800 hover:bg-carbon-700 text-slate-300 rounded-lg border border-slate-700 transition-colors shadow-sm"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl border border-slate-300 dark:border-slate-700 transition-all shadow-sm active:scale-95 font-bold"
             title="Browse all circuits"
           >
-            <Compass className="w-4 h-4 text-cyan-400" />
+            <Compass className="w-4 h-4 text-blue-600 dark:text-cyan-400" />
             <span className="hidden sm:inline">Circuits</span>
           </button>
 
           {/* How to Play Help button */}
           <button
             onClick={() => setShowHowToPlay(true)}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 bg-carbon-800 hover:bg-carbon-700 text-slate-300 rounded-lg border border-slate-700 transition-colors shadow-sm"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl border border-slate-300 dark:border-slate-700 transition-all shadow-sm active:scale-95 font-bold"
             title="How to Play"
           >
-            <HelpCircle className="w-4 h-4 text-amber-400" />
+            <HelpCircle className="w-4 h-4 text-amber-500" />
             <span className="hidden sm:inline">Rules</span>
           </button>
         </div>
@@ -368,7 +412,7 @@ export function App() {
       {/* ========================================================================= */}
       {/* 2. ROUND TELEMETRY TRACKER STRIP                                          */}
       {/* ========================================================================= */}
-      <div className="h-9 shrink-0 px-4 bg-carbon-950 border-b border-slate-800/80 flex items-center justify-between z-20 text-xs font-mono">
+      <div className="h-9 shrink-0 px-4 bg-slate-100/80 dark:bg-slate-950/80 border-b border-slate-200 dark:border-slate-800/80 flex items-center justify-between z-20 text-xs font-mono transition-colors">
         <div className="flex items-center gap-1.5">
           {[0, 1, 2, 3, 4].map(idx => {
             const isCompleted = idx < results.length;
@@ -378,18 +422,22 @@ export function App() {
             return (
               <div
                 key={idx}
-                className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded border text-[11px] font-mono transition-all ${
+                className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg border text-[11px] font-mono transition-all ${
                   isCompleted
-                    ? 'bg-carbon-900 border-slate-700 text-slate-200'
+                    ? 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 font-bold shadow-sm'
                     : isCurrent
-                    ? 'bg-amber-950/80 border-amber-400/80 text-amber-300 shadow-[0_0_8px_rgba(255,222,0,0.3)] animate-pulse'
-                    : 'bg-carbon-950 border-slate-800 text-slate-600'
+                    ? 'bg-amber-100 dark:bg-amber-950/80 border-amber-400 text-amber-900 dark:text-amber-300 font-black shadow-sm'
+                    : 'bg-slate-200/50 dark:bg-slate-900/50 border-slate-300/60 dark:border-slate-800 text-slate-400 dark:text-slate-600'
                 }`}
               >
                 <span>R{idx + 1}</span>
                 {isCompleted && (
-                  <span className={`font-bold ${
-                    roundScore >= 95 ? 'text-emerald-400' : roundScore >= 80 ? 'text-cyan-400' : 'text-amber-400'
+                  <span className={`font-black ${
+                    roundScore >= 95 
+                      ? 'text-emerald-700 dark:text-emerald-400' 
+                      : roundScore >= 80 
+                      ? 'text-blue-700 dark:text-cyan-400' 
+                      : 'text-amber-700 dark:text-amber-400'
                   }`}>
                     {roundScore}
                   </span>
@@ -400,11 +448,11 @@ export function App() {
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="text-slate-500 hidden sm:inline">SESSION SCORE:</span>
-          <span className="text-sm font-bold text-amber-400">
+          <span className="text-slate-500 dark:text-slate-400 hidden sm:inline font-semibold">SESSION SCORE:</span>
+          <span className="text-sm font-black text-amber-700 dark:text-amber-400">
             {results.reduce((acc, r) => acc + r.score, 0)}
           </span>
-          <span className="text-slate-600">/ 500</span>
+          <span className="text-slate-400 dark:text-slate-600">/ 500</span>
         </div>
       </div>
 
@@ -418,10 +466,11 @@ export function App() {
           targetTrack={currentSetup.targetTrack}
           initialScale={currentSetup.initialScale}
           currentRoundIndex={currentRoundIndex}
+          isDark={isDark}
           onLockInCommit={handleLockInCommit}
         />
       ) : (
-        <div className="w-full flex-1 flex items-center justify-center font-mono text-slate-400">
+        <div className="w-full flex-1 flex items-center justify-center font-mono text-slate-500">
           Loading track telemetry...
         </div>
       )}
@@ -447,7 +496,7 @@ export function App() {
           gameMode={gameMode}
           dateString={todaySeedInfo.dateString}
           stats={userStats}
-          onPlayAgain={() => initGameSession(gameMode)}
+          onPlayAgain={() => initGameSession(gameMode, true)}
           onChangeMode={handleModeSwitch}
         />
       )}
@@ -466,6 +515,7 @@ export function App() {
       <CircuitGarage
         isOpen={showGarage}
         onClose={() => setShowGarage(false)}
+        isDark={isDark}
       />
 
     </div>

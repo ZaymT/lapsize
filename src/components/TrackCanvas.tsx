@@ -10,6 +10,7 @@ interface TrackCanvasProps {
   ghostTransform: TransformState | null;
   stageTransform: StageTransform;
   isRevealing: boolean;
+  isDark?: boolean;
   handlers: {
     onTargetPointerDown: (e: React.PointerEvent) => void;
     onStagePointerDown: (e: React.PointerEvent) => void;
@@ -31,13 +32,14 @@ export const TrackCanvas: React.FC<TrackCanvasProps> = ({
   ghostTransform,
   stageTransform,
   isRevealing,
+  isDark = true,
   handlers,
   onResetCamera,
   onCenterTarget,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Stroke width that scales inversely with zoom to maintain sharp ~3.5px line weight on screen
+  // Stroke width that scales inversely with zoom to maintain sharp ~3.2px line weight on screen
   const strokeWidth = useMemo(() => {
     return Math.max(1.5, Math.min(6.0, 3.2 / stageTransform.zoom));
   }, [stageTransform.zoom]);
@@ -47,9 +49,38 @@ export const TrackCanvas: React.FC<TrackCanvasProps> = ({
     return Math.max(1.0, Math.min(4.0, 2.0 / stageTransform.zoom));
   }, [stageTransform.zoom]);
 
-  // Calculate dynamic metric ruler length (find a nice round number in meters: 100m, 250m, 500m, 1000m)
+  // Palette definition based on active theme
+  const palette = useMemo(() => {
+    if (isDark) {
+      return {
+        anchorStroke: '#00F0FF',
+        anchorFill: '#00F0FF',
+        guessStroke: isRevealing ? '#10B981' : '#FBBF24',
+        guessFill: '#FBBF24',
+        ghostStroke: '#F59E0B',
+        rulerBar: '#00F0FF',
+        hudCard: 'bg-slate-900/95 border-slate-700/80 text-slate-100 shadow-xl',
+        hudButton: 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700',
+        reticle: 'border-slate-600/40',
+        rulerCard: 'bg-slate-900/90 border-slate-700/80 text-slate-300',
+      };
+    }
+    return {
+      anchorStroke: '#1D4ED8', // Rich FIA royal blue
+      anchorFill: '#1D4ED8',
+      guessStroke: isRevealing ? '#059669' : '#EA580C', // Deep racing orange / emerald
+      guessFill: '#EA580C',
+      ghostStroke: '#C2410C',
+      rulerBar: '#1D4ED8',
+      hudCard: 'bg-white/95 border-slate-200 text-slate-900 shadow-lg',
+      hudButton: 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300',
+      reticle: 'border-slate-400/40',
+      rulerCard: 'bg-white/90 border-slate-200 text-slate-700',
+    };
+  }, [isDark, isRevealing]);
+
+  // Calculate dynamic metric ruler length
   const rulerMetric = useMemo(() => {
-    // Want ruler bar to be ~100 to 180 pixels wide on screen
     const targetPixels = 120;
     const rawMeters = targetPixels / stageTransform.zoom;
 
@@ -72,7 +103,9 @@ export const TrackCanvas: React.FC<TrackCanvasProps> = ({
   return (
     <div
       ref={containerRef}
-      className="relative w-full h-full overflow-hidden select-none bg-carbon-950 cursor-crosshair touch-none"
+      className={`relative w-full h-full overflow-hidden select-none cursor-crosshair touch-none ${
+        isDark ? 'bg-[#090D16]' : 'bg-[#F8FAFC]'
+      }`}
       onPointerDown={handlers.onStagePointerDown}
       onPointerMove={handlers.onPointerMove}
       onPointerUp={handlers.onPointerUp}
@@ -83,7 +116,7 @@ export const TrackCanvas: React.FC<TrackCanvasProps> = ({
     >
       {/* Dynamic Telemetry Grid Lines (fixed screen overlay) */}
       <div 
-        className="absolute inset-0 pointer-events-none opacity-40 telemetry-grid"
+        className="absolute inset-0 pointer-events-none telemetry-grid"
         style={{
           backgroundPosition: `${stageTransform.x % 40}px ${stageTransform.y % 40}px`,
         }}
@@ -98,8 +131,8 @@ export const TrackCanvas: React.FC<TrackCanvasProps> = ({
           transform: 'translate(-50%, -50%)',
         }}
       >
-        <div className="w-8 h-8 border border-white/10 rounded-full flex items-center justify-center">
-          <div className="w-1.5 h-1.5 bg-white/20 rounded-full" />
+        <div className={`w-8 h-8 border ${palette.reticle} rounded-full flex items-center justify-center`}>
+          <div className="w-1.5 h-1.5 bg-slate-400/40 rounded-full" />
         </div>
       </div>
 
@@ -111,21 +144,8 @@ export const TrackCanvas: React.FC<TrackCanvasProps> = ({
         }}
       >
         <defs>
-          {/* Cyan Glow Filter */}
-          <filter id="cyanGlow" x="-30%" y="-30%" width="160%" height="160%">
-            <feDropShadow dx="0" dy="0" stdDeviation="4" floodColor="#00F0FF" floodOpacity="0.85" />
-            <feDropShadow dx="0" dy="0" stdDeviation="10" floodColor="#00F0FF" floodOpacity="0.4" />
-          </filter>
-
-          {/* Yellow Glow Filter */}
-          <filter id="yellowGlow" x="-30%" y="-30%" width="160%" height="160%">
-            <feDropShadow dx="0" dy="0" stdDeviation="4" floodColor="#FFDE00" floodOpacity="0.85" />
-            <feDropShadow dx="0" dy="0" stdDeviation="12" floodColor="#FFDE00" floodOpacity="0.45" />
-          </filter>
-
-          {/* Ghost Glow Filter */}
-          <filter id="ghostGlow" x="-20%" y="-20%" width="140%" height="140%">
-            <feDropShadow dx="0" dy="0" stdDeviation="2" floodColor="#F59E0B" floodOpacity="0.5" />
+          <filter id="cleanTrackShadow" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#000000" floodOpacity={isDark ? "0.65" : "0.2"} />
           </filter>
         </defs>
 
@@ -136,24 +156,24 @@ export const TrackCanvas: React.FC<TrackCanvasProps> = ({
             transformOrigin: '0 0',
           }}
         >
-          {/* Reference Track (Cyan Vector Stroke - Fixed Anchor at 1.0x Scale) */}
+          {/* Reference Track (Fixed Anchor at 1.0x Scale) */}
           <g id="reference-track-group">
-            {/* Soft Ambient Fill */}
+            {/* Ambient Interior Fill */}
             <path
               d={referenceTrack.svgPath}
-              fill="#00F0FF"
-              fillOpacity="0.04"
+              fill={palette.anchorFill}
+              fillOpacity={isDark ? 0.06 : 0.05}
               stroke="none"
             />
-            {/* Primary High-Contrast Cyan Stroke */}
+            {/* Primary Clean Vector Stroke */}
             <path
               d={referenceTrack.svgPath}
               fill="none"
-              stroke="#00F0FF"
+              stroke={palette.anchorStroke}
               strokeWidth={strokeWidth}
               strokeLinecap="round"
               strokeLinejoin="round"
-              filter="url(#cyanGlow)"
+              filter="url(#cleanTrackShadow)"
               className="transition-colors duration-200"
             />
           </g>
@@ -170,18 +190,17 @@ export const TrackCanvas: React.FC<TrackCanvasProps> = ({
               <path
                 d={targetTrack.svgPath}
                 fill="none"
-                stroke="#F59E0B"
+                stroke={palette.ghostStroke}
                 strokeWidth={ghostStrokeWidth}
                 strokeDasharray={`${6 / stageTransform.zoom}, ${5 / stageTransform.zoom}`}
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                opacity={0.5}
-                filter="url(#ghostGlow)"
+                opacity={0.65}
               />
             </g>
           )}
 
-          {/* Target Track (Interactive Neon Yellow/Amber Vector Stroke) */}
+          {/* Target Track (Interactive Guess Vector Stroke) */}
           <g
             id="target-track-group"
             style={{
@@ -193,20 +212,20 @@ export const TrackCanvas: React.FC<TrackCanvasProps> = ({
             {/* Ambient Interior Fill */}
             <path
               d={targetTrack.svgPath}
-              fill="#FFDE00"
-              fillOpacity={0.08}
+              fill={palette.guessFill}
+              fillOpacity={isDark ? 0.08 : 0.06}
               stroke="none"
             />
 
-            {/* Neon Yellow Stroke with Glow */}
+            {/* Sharp Vector Stroke */}
             <path
               d={targetTrack.svgPath}
               fill="none"
-              stroke={isRevealing ? "#00E676" : "#FFDE00"}
+              stroke={palette.guessStroke}
               strokeWidth={strokeWidth}
               strokeLinecap="round"
               strokeLinejoin="round"
-              filter="url(#yellowGlow)"
+              filter="url(#cleanTrackShadow)"
             />
 
             {/* Invisible Thick Hit-Area Stroke for Easy Touch/Mouse Dragging */}
@@ -226,38 +245,42 @@ export const TrackCanvas: React.FC<TrackCanvasProps> = ({
       {/* Top Left: Track Telemetry Cards */}
       <div className="absolute top-4 left-4 flex flex-col gap-2 pointer-events-none">
         {/* Reference Track Badge */}
-        <div className="flex items-center gap-2.5 px-3 py-1.5 bg-carbon-900/90 border border-cyan-500/40 rounded-lg shadow-cyan-glow backdrop-blur-md">
-          <div className="w-2.5 h-2.5 rounded-full bg-telemetry-cyan shadow-[0_0_8px_#00F0FF] animate-pulse" />
+        <div className={`flex items-center gap-2.5 px-3.5 py-2 border rounded-xl backdrop-blur-md ${palette.hudCard}`}>
+          <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: palette.anchorStroke }} />
           <div className="flex flex-col">
-            <div className="flex items-center gap-1.5 text-xs text-cyan-400 font-mono font-semibold tracking-wider uppercase">
-              <span>{referenceTrack.shortName}</span>
-              <span className="text-[10px] text-cyan-500/70">({referenceTrack.series.toUpperCase()})</span>
+            <div className="flex items-center gap-1.5 text-xs font-mono font-bold tracking-wider uppercase">
+              <span className={isDark ? "text-cyan-400" : "text-blue-700"}>{referenceTrack.shortName}</span>
+              <span className="text-[10px] opacity-60">({referenceTrack.series.toUpperCase()})</span>
             </div>
-            <div className="text-[10px] text-slate-400 font-mono">
+            <div className="text-[10px] font-mono opacity-70">
               {(referenceTrack.officialLapLengthMeters / 1000).toFixed(3)} km • {referenceTrack.boundingWidthMeters}m × {referenceTrack.boundingHeightMeters}m
             </div>
           </div>
-          <div className="ml-2 px-1.5 py-0.5 rounded text-[10px] font-mono bg-cyan-950/80 border border-cyan-400/40 text-cyan-300 font-bold">
+          <div className={`ml-2 px-2 py-0.5 rounded text-[10px] font-mono font-extrabold border ${
+            isDark 
+              ? 'bg-cyan-950/80 border-cyan-500/40 text-cyan-300' 
+              : 'bg-blue-50 border-blue-200 text-blue-800'
+          }`}>
             1.000x ANCHOR
           </div>
         </div>
 
         {/* Target Track Badge */}
-        <div className="flex items-center gap-2.5 px-3 py-1.5 bg-carbon-900/90 border border-amber-500/40 rounded-lg shadow-amber-glow backdrop-blur-md pointer-events-auto">
-          <div className="w-2.5 h-2.5 rounded-full bg-telemetry-yellow shadow-[0_0_8px_#FFDE00]" />
+        <div className={`flex items-center gap-2.5 px-3.5 py-2 border rounded-xl backdrop-blur-md pointer-events-auto ${palette.hudCard}`}>
+          <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: palette.guessStroke }} />
           <div className="flex flex-col">
-            <div className="flex items-center gap-1.5 text-xs text-amber-400 font-mono font-semibold tracking-wider uppercase">
-              <span>{targetTrack.shortName}</span>
-              <span className="text-[10px] text-amber-500/70">({targetTrack.series.toUpperCase()})</span>
+            <div className="flex items-center gap-1.5 text-xs font-mono font-bold tracking-wider uppercase">
+              <span className={isDark ? "text-amber-400" : "text-amber-700"}>{targetTrack.shortName}</span>
+              <span className="text-[10px] opacity-60">({targetTrack.series.toUpperCase()})</span>
             </div>
-            <div className="text-[10px] text-slate-400 font-mono">
+            <div className="text-[10px] font-mono opacity-70">
               {(targetTrack.officialLapLengthMeters / 1000).toFixed(3)} km • {targetTrack.turns} Turns
             </div>
           </div>
-          <div className={`ml-2 px-2 py-0.5 rounded text-xs font-mono font-bold border ${
+          <div className={`ml-2 px-2 py-0.5 rounded text-xs font-mono font-extrabold border ${
             isRevealing 
-              ? 'bg-emerald-950/80 border-emerald-400/50 text-emerald-400 shadow-green-glow' 
-              : 'bg-amber-950/80 border-amber-400/40 text-amber-300'
+              ? (isDark ? 'bg-emerald-950/80 border-emerald-500/40 text-emerald-300' : 'bg-emerald-50 border-emerald-300 text-emerald-800')
+              : (isDark ? 'bg-amber-950/80 border-amber-500/40 text-amber-300' : 'bg-amber-50 border-amber-300 text-amber-800')
           }`}>
             {isRevealing ? 'TRUE SCALE: 1.000x' : `GUESS: ${targetTransform.scale.toFixed(3)}x`}
           </div>
@@ -270,9 +293,9 @@ export const TrackCanvas: React.FC<TrackCanvasProps> = ({
           <button
             onClick={onCenterTarget}
             title="Center Target Track over Reference"
-            className="flex items-center gap-1.5 px-2.5 py-1.5 bg-carbon-900/90 hover:bg-carbon-800 border border-slate-700/60 rounded-lg text-xs font-mono text-slate-300 transition-colors shadow-sm"
+            className={`flex items-center gap-1.5 px-3 py-1.5 border rounded-lg text-xs font-mono font-semibold transition-colors shadow-sm ${palette.hudButton}`}
           >
-            <Move className="w-3.5 h-3.5 text-amber-400" />
+            <Move className="w-3.5 h-3.5 text-amber-500" />
             <span className="hidden sm:inline">Center Target</span>
           </button>
         )}
@@ -281,42 +304,45 @@ export const TrackCanvas: React.FC<TrackCanvasProps> = ({
           <button
             onClick={onResetCamera}
             title="Reset Viewport Framing"
-            className="flex items-center gap-1.5 px-2.5 py-1.5 bg-carbon-900/90 hover:bg-carbon-800 border border-slate-700/60 rounded-lg text-xs font-mono text-slate-300 transition-colors shadow-sm"
+            className={`flex items-center gap-1.5 px-3 py-1.5 border rounded-lg text-xs font-mono font-semibold transition-colors shadow-sm ${palette.hudButton}`}
           >
-            <Maximize2 className="w-3.5 h-3.5 text-cyan-400" />
+            <Maximize2 className="w-3.5 h-3.5 text-cyan-500" />
             <span className="hidden sm:inline">Reset View</span>
           </button>
         )}
 
         {/* North Compass Badge */}
-        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-carbon-900/90 border border-slate-700/60 text-slate-400">
-          <Compass className="w-4 h-4 text-cyan-400" />
+        <div className={`flex items-center justify-center w-8 h-8 rounded-lg border shadow-sm ${palette.hudButton}`}>
+          <Compass className={`w-4 h-4 ${isDark ? 'text-cyan-400' : 'text-blue-600'}`} />
         </div>
       </div>
 
       {/* Bottom Left: Calibrated Metric Scale Ruler */}
-      <div className="absolute bottom-4 left-4 flex flex-col gap-1 p-2 bg-carbon-900/85 border border-slate-800/80 rounded-lg backdrop-blur-md pointer-events-none">
-        <div className="flex items-center justify-between text-[10px] font-mono text-slate-400">
+      <div className={`absolute bottom-4 left-4 flex flex-col gap-1 p-2.5 border rounded-xl backdrop-blur-md pointer-events-none shadow-md ${palette.rulerCard}`}>
+        <div className="flex items-center justify-between text-[10px] font-mono opacity-80">
           <span>0m</span>
-          <span className="font-semibold text-slate-200">
+          <span className="font-bold">
             {rulerMetric.meters >= 1000 ? `${rulerMetric.meters / 1000} km` : `${rulerMetric.meters} m`}
           </span>
         </div>
         {/* Visual Scale Bar */}
         <div 
-          className="h-1.5 bg-cyan-400/80 rounded-sm border-x border-cyan-200 shadow-[0_0_6px_rgba(0,240,255,0.4)]"
-          style={{ width: `${Math.max(40, rulerMetric.pixelWidth)}px` }}
+          className="h-1.5 rounded-sm"
+          style={{ 
+            width: `${Math.max(40, rulerMetric.pixelWidth)}px`,
+            backgroundColor: palette.rulerBar 
+          }}
         />
-        <div className="text-[9px] font-mono text-slate-500 text-right">
+        <div className="text-[9px] font-mono opacity-60 text-right">
           {rulerMetric.feet.toLocaleString()} ft
         </div>
       </div>
 
       {/* Interactive Guidance Tip Banner */}
       {!isRevealing && (
-        <div className="absolute bottom-4 right-4 hidden md:flex items-center gap-2 px-3 py-1.5 bg-carbon-900/80 border border-slate-800 rounded-lg text-[11px] font-mono text-slate-400 pointer-events-none backdrop-blur-sm">
-          <Move className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
-          <span>Drag amber track • Shift+Wheel to resize • Space+Drag to pan</span>
+        <div className={`absolute bottom-4 right-4 hidden md:flex items-center gap-2 px-3 py-1.5 border rounded-lg text-[11px] font-mono pointer-events-none backdrop-blur-sm shadow-sm ${palette.hudCard}`}>
+          <Move className="w-3.5 h-3.5 text-amber-500 animate-pulse" />
+          <span>Drag guess track • Shift+Wheel to resize • Space+Drag to pan</span>
         </div>
       )}
     </div>

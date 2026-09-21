@@ -3,9 +3,8 @@ import type { RoundResult } from '../types/game';
 import confetti from 'canvas-confetti';
 import { 
   ArrowRight, 
-  Ruler, 
-  Flag, 
-  Info
+  MapPin, 
+  Info 
 } from 'lucide-react';
 
 interface RevealModalProps {
@@ -21,11 +20,11 @@ export const RevealModal: React.FC<RevealModalProps> = ({
   totalRounds,
   onNextRound,
 }) => {
-  const { referenceTrack, targetTrack, guessedScale, accuracy, score, scaleDeltaPercent, trivia } = result;
+  const { score, accuracy, scaleDeltaPercent, guessedScale, trivia, referenceTrack, targetTrack } = result;
 
-  // Trigger celebratory confetti for great/flawless scores (>= 90 pts)
+  // Trigger celebration confetti for high-scoring guesses
   useEffect(() => {
-    if (score >= 90) {
+    if (score >= 80) {
       confetti({
         particleCount: score >= 95 ? 100 : 50,
         spread: 70,
@@ -37,193 +36,171 @@ export const RevealModal: React.FC<RevealModalProps> = ({
 
   // Scoring qualitative grade
   const grade = (() => {
-    if (score >= 95) return { text: 'FLAWLESS CALIBRATION', color: 'text-telemetry-green', border: 'border-emerald-500/50', bg: 'bg-emerald-950/80', badge: 'bg-emerald-500 text-carbon-950' };
-    if (score >= 80) return { text: 'EXCELLENT ESTIMATE', color: 'text-telemetry-cyan', border: 'border-cyan-500/50', bg: 'bg-cyan-950/80', badge: 'bg-cyan-400 text-carbon-950' };
-    if (score >= 50) return { text: 'SOLID ESTIMATE', color: 'text-telemetry-yellow', border: 'border-amber-500/50', bg: 'bg-amber-950/80', badge: 'bg-amber-400 text-carbon-950' };
-    return { text: 'TELEMETRY DISCREPANCY', color: 'text-telemetry-red', border: 'border-red-500/50', bg: 'bg-red-950/80', badge: 'bg-red-500 text-white' };
+    if (score >= 95) return { text: 'FLAWLESS CALIBRATION', color: 'text-emerald-700 dark:text-emerald-400', border: 'border-emerald-300 dark:border-emerald-500/50', bg: 'bg-emerald-50 dark:bg-emerald-950/80', badge: 'bg-emerald-600 text-white dark:bg-emerald-500 dark:text-slate-950' };
+    if (score >= 80) return { text: 'EXCELLENT ESTIMATE', color: 'text-blue-700 dark:text-cyan-400', border: 'border-blue-300 dark:border-cyan-500/50', bg: 'bg-blue-50 dark:bg-cyan-950/80', badge: 'bg-blue-600 text-white dark:bg-cyan-400 dark:text-slate-950' };
+    if (score >= 50) return { text: 'SOLID ESTIMATE', color: 'text-amber-700 dark:text-amber-400', border: 'border-amber-300 dark:border-amber-500/50', bg: 'bg-amber-50 dark:bg-amber-950/80', badge: 'bg-amber-500 text-white dark:bg-amber-400 dark:text-slate-950' };
+    return { text: 'TELEMETRY DISCREPANCY', color: 'text-red-700 dark:text-red-400', border: 'border-red-300 dark:border-red-500/50', bg: 'bg-red-50 dark:bg-red-950/80', badge: 'bg-red-600 text-white' };
   })();
 
   const isLastRound = currentRound >= totalRounds;
 
   return (
     <div className="fixed inset-x-0 bottom-0 z-50 p-3 sm:p-4 max-h-[88vh] overflow-y-auto pointer-events-auto animate-in slide-in-from-bottom duration-300">
-      <div className="max-w-4xl mx-auto bg-carbon-900/98 border border-slate-700/80 rounded-2xl shadow-2xl backdrop-blur-2xl overflow-hidden p-4 sm:p-6 flex flex-col gap-4">
+      <div className="max-w-4xl mx-auto bg-white/98 dark:bg-slate-900/98 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-2xl shadow-2xl backdrop-blur-2xl overflow-hidden p-4 sm:p-6 flex flex-col gap-4 transition-colors">
         
         {/* Header Strip: Round counter and Score */}
-        <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-800">
+        <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
           <div className="flex items-center gap-3">
-            <span className="px-2.5 py-1 rounded bg-carbon-800 border border-slate-700 text-xs font-mono font-semibold text-slate-300">
+            <span className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-xs font-mono font-bold text-slate-700 dark:text-slate-300 shadow-sm">
               ROUND {currentRound} OF {totalRounds}
             </span>
-            <div className={`px-2.5 py-1 rounded-full text-xs font-mono font-bold tracking-wider uppercase border ${grade.border} ${grade.bg} ${grade.color}`}>
+            <div className={`px-3 py-1 rounded-full text-xs font-mono font-black tracking-wider uppercase border shadow-sm ${grade.border} ${grade.bg} ${grade.color}`}>
               {grade.text}
             </div>
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="text-xs font-mono text-slate-400">ROUND SCORE:</span>
+            <span className="text-xs font-mono text-slate-500 dark:text-slate-400 font-semibold">ROUND SCORE:</span>
             <div className="flex items-baseline gap-1">
-              <span className={`text-2xl sm:text-3xl font-mono font-extrabold ${grade.color}`}>
+              <span className={`text-2xl sm:text-3xl font-mono font-black ${grade.color}`}>
                 +{score}
               </span>
-              <span className="text-xs font-mono text-slate-500">/ 100</span>
+              <span className="text-xs font-mono text-slate-400 dark:text-slate-500">/ 100</span>
             </div>
           </div>
         </div>
 
         {/* Mathematical Delta Telemetry Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 font-mono">
-          {/* Guessed Scale */}
-          <div className="p-3 bg-carbon-950/90 rounded-xl border border-slate-800/80 flex flex-col">
-            <span className="text-[10px] text-slate-400 uppercase tracking-wider">Your Guess</span>
-            <span className="text-base sm:text-lg font-bold text-amber-400 mt-1">
+          <div className="p-3 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800 flex flex-col shadow-sm">
+            <span className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase">GUESSED SCALE</span>
+            <span className="text-lg font-black text-amber-700 dark:text-amber-400 mt-0.5">
               {guessedScale.toFixed(3)}x
             </span>
-            <span className="text-[10px] text-slate-500">Relative size</span>
+            <span className="text-[10px] text-slate-400 dark:text-slate-500">Your committed size</span>
           </div>
 
-          {/* Actual Scale */}
-          <div className="p-3 bg-carbon-950/90 rounded-xl border border-slate-800/80 flex flex-col">
-            <span className="text-[10px] text-slate-400 uppercase tracking-wider">Actual Reality</span>
-            <span className="text-base sm:text-lg font-bold text-emerald-400 mt-1">
+          <div className="p-3 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800 flex flex-col shadow-sm">
+            <span className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase">ACTUAL RELATIVE</span>
+            <span className="text-lg font-black text-blue-700 dark:text-cyan-400 mt-0.5">
               1.000x
             </span>
-            <span className="text-[10px] text-slate-500">Ground truth</span>
+            <span className="text-[10px] text-slate-400 dark:text-slate-500">True metric ground truth</span>
           </div>
 
-          {/* Scale Error Delta */}
-          <div className="p-3 bg-carbon-950/90 rounded-xl border border-slate-800/80 flex flex-col">
-            <span className="text-[10px] text-slate-400 uppercase tracking-wider">Scale Delta</span>
-            <span className={`text-base sm:text-lg font-bold mt-1 ${Math.abs(scaleDeltaPercent) <= 5 ? 'text-emerald-400' : Math.abs(scaleDeltaPercent) <= 15 ? 'text-cyan-400' : 'text-amber-400'}`}>
+          <div className="p-3 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800 flex flex-col shadow-sm">
+            <span className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase">SCALE DELTA</span>
+            <span className={`text-lg font-black mt-0.5 ${Math.abs(scaleDeltaPercent) <= 5 ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-800 dark:text-slate-200'}`}>
               {scaleDeltaPercent > 0 ? `+${scaleDeltaPercent.toFixed(1)}%` : `${scaleDeltaPercent.toFixed(1)}%`}
             </span>
-            <span className="text-[10px] text-slate-500">
+            <span className="text-[10px] text-slate-400 dark:text-slate-500">
               {scaleDeltaPercent > 0 ? 'Overestimated' : 'Underestimated'}
             </span>
           </div>
 
-          {/* Mathematical Accuracy */}
-          <div className="p-3 bg-carbon-950/90 rounded-xl border border-slate-800/80 flex flex-col">
-            <span className="text-[10px] text-slate-400 uppercase tracking-wider">Accuracy Metric</span>
-            <span className={`text-base sm:text-lg font-bold mt-1 ${accuracy >= 0.95 ? 'text-emerald-400' : 'text-cyan-400'}`}>
+          <div className="p-3 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800 flex flex-col shadow-sm">
+            <span className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase">ACCURACY INDEX</span>
+            <span className="text-lg font-black text-slate-900 dark:text-slate-100 mt-0.5">
               {(accuracy * 100).toFixed(1)}%
             </span>
-            <span className="text-[10px] text-slate-500">min(R, 1/R)</span>
+            <span className="text-[10px] text-slate-400 dark:text-slate-500">Min(R, 1/R) formula</span>
           </div>
         </div>
 
-        {/* Side-by-Side Physical Ground Truth Comparison Table */}
-        <div className="bg-carbon-950/90 rounded-xl border border-slate-800 overflow-hidden">
-          <div className="px-3.5 py-2 bg-carbon-800/50 border-b border-slate-800 flex items-center justify-between text-xs font-mono text-slate-300">
-            <span className="font-semibold flex items-center gap-1.5">
-              <Ruler className="w-3.5 h-3.5 text-cyan-400" />
-              PHYSICAL GROUND TRUTH TELEMETRY
-            </span>
-            <span className="text-[11px] text-slate-400">Metric Survey</span>
-          </div>
-
-          <div className="p-3 grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-mono">
-            {/* Target Track Column */}
-            <div className="flex flex-col gap-2 p-2.5 bg-amber-950/20 border border-amber-500/20 rounded-lg">
-              <div className="flex items-center justify-between border-b border-amber-500/20 pb-1.5">
-                <div className="flex items-center gap-1.5 font-bold text-amber-400">
-                  <Flag className="w-3.5 h-3.5" />
-                  <span>{targetTrack.name}</span>
-                </div>
-                <span className="text-[10px] uppercase px-1.5 py-0.2 bg-amber-400/10 text-amber-300 rounded">
-                  {targetTrack.series}
-                </span>
+        {/* Side-by-Side Metric Comparison */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-mono">
+          {/* Reference Track Footprint */}
+          <div className="p-3.5 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800 flex flex-col gap-2 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5 font-bold text-blue-700 dark:text-cyan-400">
+                <MapPin className="w-3.5 h-3.5" />
+                <span>{referenceTrack.name}</span>
               </div>
-              <div className="space-y-1 text-slate-300 text-[11px]">
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Lap Length:</span>
-                  <span className="text-slate-200">
-                    {(targetTrack.officialLapLengthMeters / 1000).toFixed(3)} km ({targetTrack.officialLapLengthMiles.toFixed(3)} mi)
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Footprint (W × H):</span>
-                  <span className="text-slate-200">
-                    {targetTrack.boundingWidthMeters}m × {targetTrack.boundingHeightMeters}m
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Enclosed Area:</span>
-                  <span className="text-slate-200">
-                    {targetTrack.areaAcres} acres ({targetTrack.areaHectares} ha)
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Corners / Turns:</span>
-                  <span className="text-slate-200">{targetTrack.turns} Turns</span>
-                </div>
-              </div>
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-100 dark:bg-cyan-950 text-blue-800 dark:text-cyan-300 font-bold uppercase">
+                ANCHOR
+              </span>
             </div>
 
-            {/* Reference Track Column */}
-            <div className="flex flex-col gap-2 p-2.5 bg-cyan-950/20 border border-cyan-500/20 rounded-lg">
-              <div className="flex items-center justify-between border-b border-cyan-500/20 pb-1.5">
-                <div className="flex items-center gap-1.5 font-bold text-cyan-400">
-                  <Flag className="w-3.5 h-3.5" />
-                  <span>{referenceTrack.name}</span>
-                </div>
-                <span className="text-[10px] uppercase px-1.5 py-0.2 bg-cyan-400/10 text-cyan-300 rounded">
-                  {referenceTrack.series}
+            <div className="grid grid-cols-2 gap-2 text-slate-600 dark:text-slate-300 pt-1">
+              <div>
+                <span className="text-slate-400 block text-[10px]">BOUNDING FOOTPRINT</span>
+                <span className="font-semibold text-slate-800 dark:text-slate-200">
+                  {referenceTrack.boundingWidthMeters}m × {referenceTrack.boundingHeightMeters}m
+                </span>
+                <span className="text-[10px] text-slate-400 block">
+                  ({Math.round(referenceTrack.boundingWidthMeters * 3.28084)}ft × {Math.round(referenceTrack.boundingHeightMeters * 3.28084)}ft)
                 </span>
               </div>
-              <div className="space-y-1 text-slate-300 text-[11px]">
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Lap Length:</span>
-                  <span className="text-slate-200">
-                    {(referenceTrack.officialLapLengthMeters / 1000).toFixed(3)} km ({referenceTrack.officialLapLengthMiles.toFixed(3)} mi)
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Footprint (W × H):</span>
-                  <span className="text-slate-200">
-                    {referenceTrack.boundingWidthMeters}m × {referenceTrack.boundingHeightMeters}m
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Enclosed Area:</span>
-                  <span className="text-slate-200">
-                    {referenceTrack.areaAcres} acres ({referenceTrack.areaHectares} ha)
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Corners / Turns:</span>
-                  <span className="text-slate-200">{referenceTrack.turns} Turns</span>
-                </div>
+              <div>
+                <span className="text-slate-400 block text-[10px]">LAP LENGTH & ENCLOSED LAND</span>
+                <span className="font-semibold text-slate-800 dark:text-slate-200">
+                  {(referenceTrack.officialLapLengthMeters / 1000).toFixed(3)} km ({referenceTrack.officialLapLengthMiles.toFixed(2)} mi)
+                </span>
+                <span className="text-[10px] text-slate-400 block">
+                  {referenceTrack.areaAcres ? `${referenceTrack.areaAcres} acres (${referenceTrack.areaHectares} ha)` : `${referenceTrack.turns} turns`}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Target Track Footprint */}
+          <div className="p-3.5 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800 flex flex-col gap-2 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5 font-bold text-amber-700 dark:text-amber-400">
+                <MapPin className="w-3.5 h-3.5" />
+                <span>{targetTrack.name}</span>
+              </div>
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 font-bold uppercase">
+                GUESS
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 text-slate-600 dark:text-slate-300 pt-1">
+              <div>
+                <span className="text-slate-400 block text-[10px]">BOUNDING FOOTPRINT</span>
+                <span className="font-semibold text-slate-800 dark:text-slate-200">
+                  {targetTrack.boundingWidthMeters}m × {targetTrack.boundingHeightMeters}m
+                </span>
+                <span className="text-[10px] text-slate-400 block">
+                  ({Math.round(targetTrack.boundingWidthMeters * 3.28084)}ft × {Math.round(targetTrack.boundingHeightMeters * 3.28084)}ft)
+                </span>
+              </div>
+              <div>
+                <span className="text-slate-400 block text-[10px]">LAP LENGTH & ENCLOSED LAND</span>
+                <span className="font-semibold text-slate-800 dark:text-slate-200">
+                  {(targetTrack.officialLapLengthMeters / 1000).toFixed(3)} km ({targetTrack.officialLapLengthMiles.toFixed(2)} mi)
+                </span>
+                <span className="text-[10px] text-slate-400 block">
+                  {targetTrack.areaAcres ? `${targetTrack.areaAcres} acres (${targetTrack.areaHectares} ha)` : `${targetTrack.turns} turns`}
+                </span>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Contextual Scale Fact Box */}
-        <div className="flex items-start gap-2.5 p-3.5 bg-gradient-to-r from-cyan-950/40 via-carbon-950 to-carbon-950 rounded-xl border border-cyan-500/30 text-xs">
-          <Info className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
-          <div className="flex flex-col gap-1">
-            <span className="font-mono font-semibold text-cyan-300 uppercase tracking-wider text-[11px]">
-              Scale Insight & Circuit Trivia
-            </span>
-            <p className="text-slate-300 leading-relaxed">
+        {/* Contextual Scale Trivia Box */}
+        {trivia && (
+          <div className="flex items-start gap-2.5 p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-500/30 text-amber-900 dark:text-amber-200 text-xs font-mono shadow-sm">
+            <Info className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+            <div className="leading-relaxed">
+              <span className="font-bold uppercase tracking-wider text-[11px] block mb-0.5">
+                TELEMETRY INSIGHT:
+              </span>
               {trivia}
-            </p>
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* Action Button: Next Round / View Summary */}
+        {/* Action Button: Next Round / View Final Results */}
         <div className="flex justify-end pt-1">
           <button
             onClick={onNextRound}
-            autoFocus
-            className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-carbon-950 font-mono font-bold text-sm rounded-xl shadow-amber-glow transition-all active:scale-[0.98]"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-3 bg-blue-600 hover:bg-blue-700 dark:bg-cyan-500 dark:hover:bg-cyan-400 text-white dark:text-slate-950 font-mono font-black text-sm tracking-wider uppercase rounded-xl transition-all shadow-md active:scale-95"
           >
-            <span>{isLastRound ? 'VIEW SESSION SUMMARY 📊' : 'CONTINUE TO NEXT ROUND'}</span>
+            <span>{isLastRound ? 'FINISH SESSION & VIEW SCORECARD' : 'NEXT TELEMETRY ROUND'}</span>
             <ArrowRight className="w-4 h-4" />
           </button>
         </div>
-
       </div>
     </div>
   );

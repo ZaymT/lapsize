@@ -284,6 +284,34 @@ def generate_d_oval(length_m, back_len_m, turn_radius_m, front_bulge_m, num_pts=
         pts.append((x, y))
     return process_points(pts, length_m)
 
+def generate_egg_oval(length_m, L, r1, r2, num_pts=240):
+    alpha = math.asin((r1 - r2) / L)
+    p1_top = (L/2.0 - r1*math.sin(alpha), r1*math.cos(alpha))
+    p2_top = (-L/2.0 - r2*math.sin(alpha), r2*math.cos(alpha))
+    p2_bot = (-L/2.0 - r2*math.sin(alpha), -r2*math.cos(alpha))
+    p1_bot = (L/2.0 - r1*math.sin(alpha), -r1*math.cos(alpha))
+    pts = []
+    n = num_pts // 4
+    for i in range(n):
+        t = i / float(n)
+        pts.append((p1_top[0] + t * (p2_top[0] - p1_top[0]), p1_top[1] + t * (p2_top[1] - p1_top[1])))
+    angle_start = math.pi/2.0 + alpha
+    angle_end = 3.0 * math.pi / 2.0 - alpha
+    for i in range(n):
+        t = i / float(n)
+        theta = angle_start + t * (angle_end - angle_start)
+        pts.append((-L/2.0 + r2 * math.cos(theta), r2 * math.sin(theta)))
+    for i in range(n):
+        t = i / float(n)
+        pts.append((p2_bot[0] + t * (p1_bot[0] - p2_bot[0]), p2_bot[1] + t * (p1_bot[1] - p2_bot[1])))
+    angle_start_wide = -math.pi/2.0 - alpha
+    angle_end_wide = math.pi/2.0 + alpha
+    for i in range(n):
+        t = i / float(n)
+        theta = angle_start_wide + t * (angle_end_wide - angle_start_wide)
+        pts.append((L/2.0 + r1 * math.cos(theta), r1 * math.sin(theta)))
+    return process_points(pts, length_m)
+
 def fetch_midohio(lap_len_m):
     way_ids = [444205375, 444205376, 444205377, 444205378, 1315957511, 1315957513, 1315957514, 1315957515]
     nodes = {}
@@ -637,7 +665,7 @@ raw_tracks = [
         "officialLapLengthMeters": 2198,
         "officialLapLengthMiles": 1.366,
         "yearOpened": 1950,
-        "source": ("svg", "raw_svgs/Darlington_Raceway_2024.svg", "longest"),
+        "source": ("egg_oval", 2198.0, 420.0, 250.0, 175.0),
         "trivia": [
             "Known as 'The Track Too Tough to Tame' and 'The Lady in Black' due to its asymmetric egg-shaped geometry.",
             "Builder Harold Brasington agreed not to disturb a neighbor's minnow pond, forcing Turns 3 and 4 to be built significantly narrower than Turns 1 and 2.",
@@ -812,6 +840,9 @@ for item in raw_tracks:
     elif src_type == "d_oval":
         _, length, back, radius, bulge = item["source"]
         geo = generate_d_oval(length, back, radius, bulge)
+    elif src_type == "egg_oval":
+        _, length, L, r1, r2 = item["source"]
+        geo = generate_egg_oval(length, L, r1, r2)
     elif src_type == "midohio":
         geo = fetch_midohio(lap_len)
     else:

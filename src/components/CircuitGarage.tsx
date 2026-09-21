@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
 import type { Track, TrackSeries } from '../types/game';
 import { TRACKS } from '../data/tracks';
-import { X, Search, Info } from 'lucide-react';
+import { X, Search, Info, MapPin } from 'lucide-react';
 
 interface CircuitGarageProps {
   isOpen: boolean;
   onClose: () => void;
+  isDark?: boolean;
 }
 
-export const CircuitGarage: React.FC<CircuitGarageProps> = ({ isOpen, onClose }) => {
+export const CircuitGarage: React.FC<CircuitGarageProps> = ({ isOpen, onClose, isDark = true }) => {
   const [selectedSeries, setSelectedSeries] = useState<TrackSeries | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTrack, setSelectedTrack] = useState<Track>(TRACKS[0]);
@@ -24,117 +25,124 @@ export const CircuitGarage: React.FC<CircuitGarageProps> = ({ isOpen, onClose })
   });
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-carbon-950/85 backdrop-blur-md p-3 sm:p-6 flex items-center justify-center animate-in fade-in duration-200 font-mono">
-      <div className="w-full max-w-5xl h-[85vh] bg-carbon-900 border border-slate-700/80 rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/60 dark:bg-slate-950/80 backdrop-blur-md p-3 sm:p-6 flex justify-center items-start py-8 sm:py-12 animate-in fade-in duration-200 font-mono">
+      <div className="w-full max-w-5xl h-[85vh] my-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl flex flex-col overflow-hidden text-slate-900 dark:text-slate-100 transition-colors">
         
         {/* Top Header */}
-        <div className="px-5 py-4 border-b border-slate-800 flex items-center justify-between bg-carbon-950/50">
+        <div className="px-5 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-950/60">
           <div className="flex items-center gap-2">
-            <div className="w-2.5 h-2.5 rounded-full bg-cyan-400 shadow-[0_0_8px_#00F0FF]" />
-            <span className="font-bold text-base text-slate-100 uppercase tracking-wider">
+            <div className={`w-2.5 h-2.5 rounded-full ${isDark ? 'bg-cyan-400' : 'bg-blue-600'}`} />
+            <span className="font-extrabold text-base uppercase tracking-wider">
               CIRCUIT TELEMETRY ARCHIVE ({TRACKS.length} CIRCUITS)
             </span>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-carbon-800 transition-colors"
+            className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Filters and Search Bar */}
-        <div className="p-4 border-b border-slate-800/80 flex flex-wrap items-center justify-between gap-3 bg-carbon-900/90">
+        {/* Filter Toolbar */}
+        <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-slate-900">
           {/* Series Tabs */}
-          <div className="flex items-center gap-1.5 p-1 bg-carbon-950 rounded-xl border border-slate-800 text-xs">
+          <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800">
             {(['all', 'f1', 'nascar', 'indycar'] as const).map(s => (
               <button
                 key={s}
                 onClick={() => setSelectedSeries(s)}
-                className={`px-3 py-1.5 rounded-lg font-semibold uppercase tracking-wider transition-all ${
+                className={`px-3 py-1 rounded-lg text-xs font-bold uppercase transition-all shadow-sm ${
                   selectedSeries === s
-                    ? 'bg-cyan-400 text-carbon-950 shadow-cyan-glow'
-                    : 'text-slate-400 hover:text-slate-200'
+                    ? 'bg-white dark:bg-slate-800 text-blue-700 dark:text-cyan-400 border border-slate-300 dark:border-slate-700'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
                 }`}
               >
-                {s === 'all' ? 'ALL TRACKS' : s.toUpperCase()}
+                {s === 'all' ? 'ALL SERIES' : s.toUpperCase()}
               </button>
             ))}
           </div>
 
-          {/* Search Box */}
-          <div className="relative flex-1 max-w-xs">
-            <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-500" />
+          {/* Search Bar */}
+          <div className="relative flex-1 sm:max-w-xs">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              placeholder="Search circuit, city..."
+              placeholder="Search tracks, cities, countries..."
               value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3 py-1.5 bg-carbon-950 border border-slate-800 rounded-xl text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-400"
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-3 py-1.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-blue-500 dark:focus:border-cyan-400"
             />
           </div>
         </div>
 
-        {/* Content Body: Split View (List on Left, Interactive Telemetry on Right) */}
-        <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
-          {/* Track List (Left Pane) */}
-          <div className="w-full md:w-80 border-r border-slate-800/80 overflow-y-auto p-2 space-y-1 bg-carbon-950/40">
-            {filteredTracks.map(t => (
-              <button
-                key={t.id}
-                onClick={() => setSelectedTrack(t)}
-                className={`w-full text-left p-2.5 rounded-xl border text-xs transition-all flex items-center justify-between ${
-                  selectedTrack.id === t.id
-                    ? 'bg-cyan-950/60 border-cyan-500/60 text-cyan-300 shadow-sm'
-                    : 'bg-carbon-900/60 border-slate-800 text-slate-300 hover:bg-carbon-800'
-                }`}
-              >
-                <div className="flex flex-col">
-                  <span className="font-bold text-slate-100">{t.name}</span>
-                  <span className="text-[10px] text-slate-500">{t.city}, {t.country}</span>
-                </div>
-                <div className="text-right">
-                  <span className="text-[10px] uppercase font-bold text-slate-400 block">{t.series}</span>
-                  <span className="text-[10px] text-slate-500 font-mono">{(t.officialLapLengthMeters / 1000).toFixed(2)} km</span>
-                </div>
-              </button>
-            ))}
+        {/* Main Content Area: Split View (List + Inspector) */}
+        <div className="flex-1 grid grid-cols-1 md:grid-cols-12 overflow-hidden">
+          {/* Left Track Browser */}
+          <div className="md:col-span-5 border-r border-slate-200 dark:border-slate-800 overflow-y-auto p-3 space-y-1.5 bg-slate-50/50 dark:bg-slate-950/40">
+            {filteredTracks.map(t => {
+              const isSelected = selectedTrack.id === t.id;
+              return (
+                <button
+                  key={t.id}
+                  onClick={() => setSelectedTrack(t)}
+                  className={`w-full p-3 rounded-xl border text-left flex items-center justify-between transition-all ${
+                    isSelected
+                      ? 'bg-blue-50 dark:bg-slate-800 border-blue-400 dark:border-cyan-500 shadow-sm'
+                      : 'bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800/80 hover:border-slate-300 dark:hover:border-slate-700'
+                  }`}
+                >
+                  <div className="flex flex-col">
+                    <span className="font-bold text-xs text-slate-900 dark:text-slate-100">
+                      {t.name}
+                    </span>
+                    <span className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                      <MapPin className="w-3 h-3" />
+                      {t.city}, {t.country}
+                    </span>
+                  </div>
+                  <div className="flex flex-col items-end">
+                    <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400">
+                      {t.series}
+                    </span>
+                    <span className="text-[10px] text-slate-500 font-semibold mt-1">
+                      {(t.officialLapLengthMeters / 1000).toFixed(2)} km
+                    </span>
+                  </div>
+                </button>
+              );
+            })}
           </div>
 
-          {/* Track Telemetry Details (Right Pane) */}
-          <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-5 bg-carbon-900">
-            {/* Header with Series Badge */}
-            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-800 pb-4">
+          {/* Right Track Inspector */}
+          <div className="md:col-span-7 p-6 overflow-y-auto flex flex-col gap-5 bg-white dark:bg-slate-900">
+            {/* Track Title Strip */}
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-4">
               <div>
-                <span className="text-xs text-amber-400 font-bold uppercase tracking-wider block mb-1">
-                  {selectedTrack.series.toUpperCase()} • {selectedTrack.trackType.replace('_', ' ').toUpperCase()}
-                </span>
-                <h3 className="text-2xl font-extrabold text-slate-100">{selectedTrack.name}</h3>
-                <span className="text-xs text-slate-400">
-                  {selectedTrack.city}, {selectedTrack.country} • Opened {selectedTrack.yearOpened}
+                <h3 className="text-xl font-black text-slate-900 dark:text-slate-100">
+                  {selectedTrack.name}
+                </h3>
+                <span className="text-xs text-slate-500 dark:text-slate-400">
+                  {selectedTrack.city}, {selectedTrack.country} • Opened {selectedTrack.yearOpened || 'Historic'}
                 </span>
               </div>
-
-              <div className="px-3 py-1.5 bg-carbon-950 border border-slate-800 rounded-xl text-right">
-                <span className="text-[10px] text-slate-500 block">OFFICIAL LAP</span>
-                <span className="text-sm font-bold text-cyan-400">
-                  {(selectedTrack.officialLapLengthMeters / 1000).toFixed(3)} km
-                </span>
-                <span className="text-[10px] text-slate-400 block">({selectedTrack.officialLapLengthMiles.toFixed(3)} mi)</span>
-              </div>
+              <span className="px-2.5 py-1 rounded-lg text-xs font-black uppercase bg-blue-50 dark:bg-cyan-950 border border-blue-300 dark:border-cyan-500 text-blue-700 dark:text-cyan-300">
+                {selectedTrack.series.toUpperCase()} • {selectedTrack.trackType.replace('_', ' ').toUpperCase()}
+              </span>
             </div>
 
-            {/* Vector Blueprint Preview */}
-            <div className="relative h-64 w-full bg-carbon-950 rounded-2xl border border-slate-800 overflow-hidden flex items-center justify-center p-4">
+            {/* Interactive Track Map Preview */}
+            <div className="w-full h-64 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800 flex items-center justify-center p-4 relative overflow-hidden shadow-inner">
               <div className="absolute inset-0 telemetry-grid opacity-30 pointer-events-none" />
               <svg
                 viewBox={selectedTrack.viewBox}
-                className="w-full h-full max-h-56 filter drop-shadow-[0_0_12px_rgba(0,240,255,0.6)]"
+                className="w-full h-full max-h-56"
               >
                 <path
                   d={selectedTrack.svgPath}
-                  fill="rgba(0, 240, 255, 0.05)"
-                  stroke="#00F0FF"
+                  fill={isDark ? '#00F0FF' : '#1D4ED8'}
+                  fillOpacity={0.06}
+                  stroke={isDark ? '#00F0FF' : '#1D4ED8'}
                   strokeWidth="6"
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -142,52 +150,55 @@ export const CircuitGarage: React.FC<CircuitGarageProps> = ({ isOpen, onClose })
               </svg>
             </div>
 
-            {/* Dimensions & Geographic Footprint */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-              <div className="p-3 bg-carbon-950 rounded-xl border border-slate-800">
-                <span className="text-[10px] text-slate-500 uppercase block">Bounding Width</span>
-                <span className="text-base font-bold text-slate-200 mt-1 block">
-                  {selectedTrack.boundingWidthMeters} m
+            {/* Metric Blueprint Specifications */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <div className="p-3 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                <span className="text-[10px] text-slate-400 font-bold block">OFFICIAL LAP LENGTH</span>
+                <span className="text-sm font-black text-slate-900 dark:text-slate-100">
+                  {selectedTrack.officialLapLengthMeters.toLocaleString()} m
                 </span>
-                <span className="text-[10px] text-slate-500">{Math.round(selectedTrack.boundingWidthMeters * 3.28084)} ft</span>
+                <span className="text-[10px] text-slate-500 block">
+                  {selectedTrack.officialLapLengthMiles.toFixed(3)} miles
+                </span>
               </div>
 
-              <div className="p-3 bg-carbon-950 rounded-xl border border-slate-800">
-                <span className="text-[10px] text-slate-500 uppercase block">Bounding Height</span>
-                <span className="text-base font-bold text-slate-200 mt-1 block">
-                  {selectedTrack.boundingHeightMeters} m
+              <div className="p-3 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                <span className="text-[10px] text-slate-400 font-bold block">BOUNDING FOOTPRINT</span>
+                <span className="text-sm font-black text-slate-900 dark:text-slate-100">
+                  {selectedTrack.boundingWidthMeters}m × {selectedTrack.boundingHeightMeters}m
                 </span>
-                <span className="text-[10px] text-slate-500">{Math.round(selectedTrack.boundingHeightMeters * 3.28084)} ft</span>
+                <span className="text-[10px] text-slate-500 block">
+                  Width × Height
+                </span>
               </div>
 
-              <div className="p-3 bg-carbon-950 rounded-xl border border-slate-800">
-                <span className="text-[10px] text-slate-500 uppercase block">Enclosed Land</span>
-                <span className="text-base font-bold text-emerald-400 mt-1 block">
-                  {selectedTrack.areaAcres} acres
+              <div className="p-3 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                <span className="text-[10px] text-slate-400 font-bold block">ENCLOSED LAND AREA</span>
+                <span className="text-sm font-black text-slate-900 dark:text-slate-100">
+                  {selectedTrack.areaAcres ? `${selectedTrack.areaAcres} acres` : 'N/A'}
                 </span>
-                <span className="text-[10px] text-slate-500">{selectedTrack.areaHectares} hectares</span>
-              </div>
-
-              <div className="p-3 bg-carbon-950 rounded-xl border border-slate-800">
-                <span className="text-[10px] text-slate-500 uppercase block">Total Corners</span>
-                <span className="text-base font-bold text-amber-400 mt-1 block">
-                  {selectedTrack.turns} Turns
+                <span className="text-[10px] text-slate-500 block">
+                  {selectedTrack.areaHectares ? `${selectedTrack.areaHectares} hectares` : `${selectedTrack.turns} turns`}
                 </span>
-                <span className="text-[10px] text-slate-500">Official count</span>
               </div>
             </div>
 
-            {/* Scale Trivia */}
-            <div className="p-4 bg-carbon-950 rounded-xl border border-slate-800 flex flex-col gap-2">
-              <span className="text-xs text-amber-400 font-bold uppercase tracking-wider flex items-center gap-1.5">
-                <Info className="w-4 h-4" />
-                Scale & History Trivia
+            {/* Historical Scale Trivia */}
+            <div className="flex flex-col gap-2 pt-2">
+              <span className="text-xs font-bold text-slate-500 uppercase">
+                HISTORICAL SCALE TRIVIA & INSIGHTS
               </span>
-              <ul className="space-y-1.5 text-xs text-slate-300 list-disc list-inside">
-                {selectedTrack.trivia.map((t, idx) => (
-                  <li key={idx} className="leading-relaxed">{t}</li>
+              <div className="space-y-2">
+                {selectedTrack.trivia.map((fact, idx) => (
+                  <div
+                    key={idx}
+                    className="p-3 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-700 dark:text-slate-300 flex items-start gap-2.5 shadow-sm"
+                  >
+                    <Info className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                    <span className="leading-relaxed">{fact}</span>
+                  </div>
                 ))}
-              </ul>
+              </div>
             </div>
 
           </div>

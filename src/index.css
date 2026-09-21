@@ -8,9 +8,17 @@
     -webkit-tap-highlight-color: transparent;
   }
 
-  body {
-    background-color: #0B0E14;
+  html.dark body {
+    background-color: #090D16;
     color: #F1F5F9;
+  }
+
+  html:not(.dark) body {
+    background-color: #F8FAFC;
+    color: #0F172A;
+  }
+
+  body {
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
     user-select: none;
     -webkit-user-select: none;
@@ -19,52 +27,42 @@
 }
 
 /* Motorsport Telemetry Grid Background */
+.dark .telemetry-grid {
+  background-image: 
+    linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
 .telemetry-grid {
   background-image: 
-    radial-gradient(circle at 50% 50%, rgba(0, 240, 255, 0.03) 0%, transparent 60%),
-    linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-  background-size: 100% 100%, 40px 40px, 40px 40px;
+    linear-gradient(to right, rgba(0, 0, 0, 0.06) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.06) 1px, transparent 1px);
+  background-size: 40px 40px;
 }
 
-/* Subtle carbon weave pattern */
-.carbon-weave {
-  background-color: #0B0E14;
-  background-image: 
-    linear-gradient(45deg, #11151E 25%, transparent 25%), 
-    linear-gradient(-45deg, #11151E 25%, transparent 25%), 
-    linear-gradient(45deg, transparent 75%, #11151E 75%), 
-    linear-gradient(-45deg, transparent 75%, #11151E 75%);
-  background-size: 16px 16px;
-  background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
-}
-
-/* High-tech scanline effect (very subtle) */
-.scanlines {
-  background: linear-gradient(
-    rgba(18, 16, 16, 0) 50%, 
-    rgba(0, 0, 0, 0.25) 50%
-  ), linear-gradient(
-    90deg,
-    rgba(255, 0, 0, 0.03),
-    rgba(0, 255, 0, 0.01),
-    rgba(0, 0, 255, 0.03)
-  );
-  background-size: 100% 4px, 6px 100%;
-}
-
-/* Custom Scrollbar for telemetry drawer */
+/* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
-::-webkit-scrollbar-track {
-  background: #0B0E14;
+.dark ::-webkit-scrollbar-track {
+  background: #090D16;
 }
-::-webkit-scrollbar-thumb {
-  background: #222938;
+::-webkit-scrollbar-track {
+  background: #F1F5F9;
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: #334155;
   border-radius: 3px;
 }
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 3px;
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
 ::-webkit-scrollbar-thumb:hover {
-  background: #323D52;
+  background: #94A3B8;
 }
